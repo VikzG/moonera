@@ -123,7 +123,7 @@ export default function AuthScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -353,13 +353,13 @@ export default function AuthScreen() {
         <View style={styles.container}>
           <Animated.Image
             source={topImages[currentImageIndex]}
-            style={[styles.topBackgroundImage, { filter: 'grayscale(100%)', opacity: imageOpacity } as any]}
+            style={[styles.topBackgroundImage, { opacity: imageOpacity }]}
             resizeMode="cover"
           />
           <View style={styles.topImageOverlay} />
           <Animated.Image
             source={bottomImages[currentImageIndex]}
-            style={[styles.bottomBackgroundImage, { filter: 'grayscale(100%)', opacity: imageOpacity } as any]}
+            style={[styles.bottomBackgroundImage, { opacity: imageOpacity }]}
             resizeMode="cover"
           />
           <View style={styles.bottomImageOverlay} />
@@ -413,13 +413,13 @@ export default function AuthScreen() {
       <View style={styles.container}>
         <Animated.Image
           source={topImages[currentImageIndex]}
-          style={[styles.topBackgroundImage, { filter: 'grayscale(100%)', opacity: imageOpacity } as any]}
+          style={[styles.topBackgroundImage, { opacity: imageOpacity }]}
           resizeMode="cover"
         />
         <View style={styles.topImageOverlay} />
         <Animated.Image
           source={bottomImages[currentImageIndex]}
-          style={[styles.bottomBackgroundImage, { filter: 'grayscale(100%)', opacity: imageOpacity } as any]}
+          style={[styles.bottomBackgroundImage, { opacity: imageOpacity }]}
           resizeMode="cover"
         />
         <View style={styles.bottomImageOverlay} />

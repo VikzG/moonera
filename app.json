@@ -19,7 +19,22 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Munera a besoin d'accéder à votre caméra pour prendre des photos et vérifier votre identité.",
+          "microphonePermission": "Munera a besoin d'accéder à votre microphone pour enregistrer des vidéos.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Munera a besoin d'accéder à votre galerie pour sélectionner des photos.",
+          "cameraPermission": "Munera a besoin d'accéder à votre caméra pour prendre des photos."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

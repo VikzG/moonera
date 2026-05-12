@@ -74,7 +74,7 @@ export default function UploadScreen() {
         }
 
         result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [3, 4],
           quality: 0.8,
@@ -108,7 +108,7 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 30,
@@ -136,7 +136,7 @@ export default function UploadScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.8,
         videoMaxDuration: 30,
@@ -300,61 +300,52 @@ export default function UploadScreen() {
       if (isAuthenticUser && insertedLook) {
         try {
           const imageResponse = await fetch(uploadedUrls[0]);
-          const imageBlob = await imageResponse.blob();
-          const reader = new FileReader();
+          const arrayBuffer = await imageResponse.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64data = `data:image/jpeg;base64,${btoa(binary)}`;
 
-          await new Promise((resolve, reject) => {
-            reader.onloadend = async () => {
-              try {
-                const base64data = reader.result as string;
+          const { data: { session } } = await supabase.auth.getSession();
+          const verifyApiUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/verify-look`;
 
-                const { data: { session } } = await supabase.auth.getSession();
-                const verifyApiUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/verify-look`;
-
-                const verifyResponse = await fetch(verifyApiUrl, {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${session?.access_token}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    imageBase64: base64data,
-                    lookId: insertedLook.id,
-                  }),
-                });
-
-                if (verifyResponse.ok) {
-                  const verificationResult = await verifyResponse.json();
-
-                  if (verificationResult.isAuthentic) {
-                    Alert.alert(
-                      'Look Authentique',
-                      'Votre look a été vérifié et classé comme authentique !',
-                      [{ text: 'OK' }]
-                    );
-                  } else {
-                    let reason = 'Vérification échouée';
-                    if (verificationResult.isAiGenerated) {
-                      reason = 'Image générée par IA détectée';
-                    } else if (!verificationResult.faceMatches) {
-                      reason = 'Le visage ne correspond pas à votre profil';
-                    }
-                    Alert.alert(
-                      'Look Libre',
-                      `Votre look a été publié en tant que "Look Libre". Raison: ${reason}`,
-                      [{ text: 'OK' }]
-                    );
-                  }
-                }
-                resolve(null);
-              } catch (error) {
-                console.error('Error verifying look:', error);
-                resolve(null);
-              }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(imageBlob);
+          const verifyResponse = await fetch(verifyApiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session?.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              imageBase64: base64data,
+              lookId: insertedLook.id,
+            }),
           });
+
+          if (verifyResponse.ok) {
+            const verificationResult = await verifyResponse.json();
+
+            if (verificationResult.isAuthentic) {
+              Alert.alert(
+                'Look Authentique',
+                'Votre look a été vérifié et classé comme authentique !',
+                [{ text: 'OK' }]
+              );
+            } else {
+              let reason = 'Vérification échouée';
+              if (verificationResult.isAiGenerated) {
+                reason = 'Image générée par IA détectée';
+              } else if (!verificationResult.faceMatches) {
+                reason = 'Le visage ne correspond pas à votre profil';
+              }
+              Alert.alert(
+                'Look Libre',
+                `Votre look a été publié en tant que "Look Libre". Raison: ${reason}`,
+                [{ text: 'OK' }]
+              );
+            }
+          }
         } catch (error) {
           console.error('Error in verification process:', error);
         }
@@ -733,8 +724,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    filter: 'grayscale(1)',
-  } as any,
+    opacity: 0.4,
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
