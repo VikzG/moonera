@@ -20,8 +20,8 @@ export default function RootLayout() {
     'Inter-Bold': Inter_700Bold,
     'Inter-Medium': Inter_600SemiBold,
     'Inter-Light': Inter_400Regular,
-    'Break-Bold': require('../assets/fonts/Break Bold.ttf'),
-    'Break Bold': require('../assets/fonts/Break Bold.ttf'),
+    'Break-Bold': require('../assets/fonts/BreakBold.ttf'),
+    'Break Bold': require('../assets/fonts/BreakBold.ttf'),
     'Poppins-Regular': Poppins_400Regular,
   });
 
