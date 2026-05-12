@@ -24,7 +24,7 @@ export function LogoIcon({ size }: LogoIconProps) {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (data && data.clans && data.clans.name === 'MUNERA') {
+      if (data && (data.clans as any)?.name === 'MUNERA') {
         setIsMuneraMember(true);
       } else {
         setIsMuneraMember(false);

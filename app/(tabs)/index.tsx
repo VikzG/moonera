@@ -269,7 +269,7 @@ export default function FeedScreen() {
         activeOpacity={0.9}
       >
         <Video
-          source={{ uri: item.video_url }}
+          source={{ uri: item.video_url ?? '' }}
           style={styles.videoImage}
           resizeMode={ResizeMode.COVER}
           isLooping

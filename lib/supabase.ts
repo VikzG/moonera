@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const supabaseUrl =
   process.env.EXPO_PUBLIC_SUPABASE_URL ||
@@ -11,8 +12,10 @@ const supabaseAnonKey =
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+    storage: AsyncStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: false,
   },
 });
 
@@ -27,8 +30,14 @@ export interface Profile {
   weekly_top_count: number;
   xp: number;
   level: number;
+  is_authentic: boolean;
+  verification_status: 'libre' | 'pending' | 'verified' | 'failed';
+  authentic_looks_count: number;
+  followers_count: number;
+  following_count: number;
   created_at: string;
   updated_at: string;
+  clan_members?: { clans: { id: string; name: string } | null }[];
 }
 
 export interface Look {
@@ -42,10 +51,12 @@ export interface Look {
   is_weekly_top: boolean;
   week_number: number | null;
   year: number | null;
-  is_duel_entry: boolean;
   duel_wins: number;
   duel_losses: number;
-  ai_analysis: string | null;
+  is_authentic_look: boolean;
+  requires_verification: boolean;
+  verification_details: Record<string, any>;
+  ai_analysis: Record<string, any> | null;
   created_at: string;
   profiles?: Profile;
 }
@@ -60,7 +71,7 @@ export interface Like {
 export interface Badge {
   id: string;
   user_id: string;
-  badge_type: 'rising_star' | 'elite_style' | 'legend' | 'rookie';
+  badge_type: 'rising_star' | 'elite_style' | 'legend' | 'rookie' | 'verified_authentic' | 'authentic_user';
   achieved_at: string;
   metadata: Record<string, any>;
 }
@@ -106,7 +117,7 @@ export interface DailyChallenge {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'like' | 'badge_earned' | 'top_100' | 'level_up';
+  type: 'like' | 'badge_earned' | 'top_100' | 'level_up' | 'duel_challenge' | 'duel_accepted' | 'duel_won' | 'duel_lost' | 'duel_tie' | 'challenge_completed' | 'follow';
   title: string;
   message: string;
   read: boolean;

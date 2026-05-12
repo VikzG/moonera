@@ -172,7 +172,7 @@ export default function LookDetailScreen() {
     type: 'image' as const,
     uri,
   }));
-  if (hasVideo) {
+  if (hasVideo && look.video_url) {
     mediaItems.push({ type: 'video', uri: look.video_url });
   }
 
@@ -181,18 +181,17 @@ export default function LookDetailScreen() {
     styleTags.push(look.category);
   }
   if (look.ai_analysis?.style_category) {
-    const exists = styleTags.some(
-      tag => tag.toLowerCase() === look.ai_analysis.style_category.toLowerCase()
-    );
+    const styleCategory = look.ai_analysis.style_category as string;
+    const exists = styleTags.some(tag => tag.toLowerCase() === styleCategory.toLowerCase());
     if (!exists) {
-      styleTags.push(look.ai_analysis.style_category);
+      styleTags.push(styleCategory);
     }
   }
   if (look.ai_analysis?.dominant_colors) {
-    styleTags.push(...look.ai_analysis.dominant_colors);
+    styleTags.push(...(look.ai_analysis.dominant_colors as string[]));
   }
 
-  const description = look.description || look.title || '';
+  const description = '';
 
   return (
     <View style={styles.container}>

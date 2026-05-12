@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Alert, FlatList, Switch, TextInput, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { Video } from 'expo-av';
+import { Video, ResizeMode } from 'expo-av';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -519,7 +519,7 @@ export default function UploadScreen() {
                     source={{ uri: selectedVideo }}
                     style={styles.videoPreview}
                     useNativeControls
-                    resizeMode="contain"
+                    resizeMode={ResizeMode.CONTAIN}
                     isLooping
                   />
                   <TouchableOpacity

@@ -348,7 +348,7 @@ export default function ProfileScreen() {
                   <Text style={styles.badgeText}>Authentic User</Text>
                 </View>
               )}
-              {badges.some(b => b.badge_type === 'verified') && (
+              {badges.some(b => b.badge_type === 'verified_authentic') && (
                 <View style={styles.badgeItem}>
                   <Text style={styles.badgeText}>Verified</Text>
                 </View>

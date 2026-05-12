@@ -300,7 +300,7 @@ export default function ClanDetailScreen() {
                 >
                   {profile?.profile_image_url || profile?.avatar_url ? (
                     <Image
-                      source={{ uri: profile.profile_image_url || profile.avatar_url }}
+                      source={{ uri: (profile.profile_image_url || profile.avatar_url) ?? undefined }}
                       style={styles.memberAvatar}
                     />
                   ) : (
