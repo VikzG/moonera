@@ -1,9 +1,13 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
-import Constants from 'expo-constants';
 
-const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://kwgqcagmhbfjbyrqawjz.supabase.co';
+
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3Z3FjYWdtaGJmamJ5cnFhd2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMjc2MTMsImV4cCI6MjA3OTkwMzYxM30.ZUsCsa8LSozSbuz9wWGLTBr1JwocJC2oVsioQLryCcs';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

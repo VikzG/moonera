@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, Animated } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Image, Animated, Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import VerificationCamera from '@/components/VerificationCamera';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, Camera, User } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 
-type VerificationStep = 'auth' | 'choice' | 'liveness' | 'ai_detection' | 'complete';
+type VerificationStep = 'auth' | 'profile_setup' | 'choice' | 'liveness' | 'ai_detection' | 'complete';
 
 const topImages = [
   require('@/assets/images/top_img_auth.png'),
@@ -28,7 +32,12 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationStep, setVerificationStep] = useState<VerificationStep>('auth');
-  const [wantVerification, setWantVerification] = useState(false);
+
+  // Profile setup state
+  const [bio, setBio] = useState('');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { signUp, signIn } = useAuth();
@@ -87,7 +96,7 @@ export default function AuthScreen() {
         if (error) {
           setError(error.message || 'Erreur lors de l\'inscription');
         } else {
-          setVerificationStep('choice');
+          setVerificationStep('profile_setup');
         }
       } else {
         const { error } = await signIn(email, password);
@@ -104,8 +113,82 @@ export default function AuthScreen() {
     }
   };
 
+  const pickAvatar = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permission requise pour accéder à la galerie');
+        return;
+      }
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
+
+  const handleProfileSetup = async (skip = false) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/(tabs)');
+        return;
+      }
+
+      let avatarUrl: string | null = null;
+
+      if (!skip && avatarUri) {
+        setUploadingAvatar(true);
+        try {
+          const response = await fetch(avatarUri);
+          const blob = await response.blob();
+          const ext = avatarUri.split('.').pop() || 'jpg';
+          const fileName = `${user.id}/avatar.${ext}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, blob, { upsert: true, contentType: `image/${ext}` });
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(fileName);
+            avatarUrl = urlData.publicUrl;
+          }
+        } catch {
+          // Avatar upload failed, continue without it
+        } finally {
+          setUploadingAvatar(false);
+        }
+      }
+
+      const updates: Record<string, any> = {};
+      if (!skip && bio.trim()) updates.bio = bio.trim();
+      if (avatarUrl) updates.profile_image_url = avatarUrl;
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('profiles').update(updates).eq('id', user.id);
+      }
+
+      setVerificationStep('choice');
+    } catch {
+      setVerificationStep('choice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleVerificationChoice = async (choice: boolean) => {
-    setWantVerification(choice);
     if (choice) {
       setVerificationStep('liveness');
     } else {
@@ -135,8 +218,7 @@ export default function AuthScreen() {
       setTimeout(() => {
         router.replace('/(tabs)');
       }, 2000);
-    } catch (error) {
-      console.error('Error updating verification status:', error);
+    } catch {
       await completeWithoutVerification();
     }
   };
@@ -148,17 +230,90 @@ export default function AuthScreen() {
 
       await supabase
         .from('profiles')
-        .update({
-          verification_status: 'libre',
-        })
+        .update({ verification_status: 'libre' })
         .eq('id', user.id);
 
       router.replace('/(tabs)');
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
       router.replace('/(tabs)');
     }
   };
+
+  if (verificationStep === 'profile_setup') {
+    return (
+      <View style={styles.outerContainer}>
+        <View style={styles.container}>
+          <Animated.Image
+            source={topImages[currentImageIndex]}
+            style={[styles.topBackgroundImage, { opacity: imageOpacity } as any]}
+            resizeMode="cover"
+          />
+          <View style={styles.topImageOverlay} />
+          <Animated.Image
+            source={bottomImages[currentImageIndex]}
+            style={[styles.bottomBackgroundImage, { opacity: imageOpacity } as any]}
+            resizeMode="cover"
+          />
+          <View style={styles.bottomImageOverlay} />
+
+          <View style={styles.logoContainer}>
+            <Text style={styles.setupTitle}>Personnalise ton profil</Text>
+            <Text style={styles.setupSubtitle}>Tu peux aussi le faire plus tard</Text>
+          </View>
+
+          <View style={styles.profileSetupContainer}>
+            {/* Avatar picker */}
+            <TouchableOpacity style={styles.avatarPicker} onPress={pickAvatar} activeOpacity={0.8}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarPreview} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <User size={36} color="#8d8d8d" />
+                </View>
+              )}
+              <View style={styles.cameraIconBadge}>
+                <Camera size={16} color="#ffffff" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.avatarHint}>Photo de profil</Text>
+
+            {/* Bio input */}
+            <TextInput
+              placeholder="Ta bio (ex: passionné de mode, sneakers...)"
+              placeholderTextColor="#8d8d8d"
+              style={[styles.input, styles.bioInput]}
+              value={bio}
+              onChangeText={setBio}
+              multiline
+              maxLength={160}
+            />
+            <Text style={styles.charCount}>{bio.length}/160</Text>
+
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={() => handleProfileSetup(false)}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {uploadingAvatar ? 'Upload en cours...' : loading ? 'Enregistrement...' : 'Continuer'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerButton}
+              onPress={() => handleProfileSetup(true)}
+              disabled={loading}
+            >
+              <Text style={styles.footerText}>Passer cette étape</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (verificationStep === 'liveness') {
     return (
@@ -202,7 +357,6 @@ export default function AuthScreen() {
             resizeMode="cover"
           />
           <View style={styles.topImageOverlay} />
-
           <Animated.Image
             source={bottomImages[currentImageIndex]}
             style={[styles.bottomBackgroundImage, { filter: 'grayscale(100%)', opacity: imageOpacity } as any]}
@@ -239,18 +393,14 @@ export default function AuthScreen() {
               onPress={() => handleVerificationChoice(true)}
               activeOpacity={0.8}
             >
-              <Text style={styles.buttonText}>
-                Devenir Authentique
-              </Text>
+              <Text style={styles.buttonText}>Devenir Authentique</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.footerButton}
               onPress={() => handleVerificationChoice(false)}
             >
-              <Text style={styles.footerText}>
-                Continuer sans vérification
-              </Text>
+              <Text style={styles.footerText}>Continuer sans vérification</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -267,7 +417,6 @@ export default function AuthScreen() {
           resizeMode="cover"
         />
         <View style={styles.topImageOverlay} />
-
         <Animated.Image
           source={bottomImages[currentImageIndex]}
           style={[styles.bottomBackgroundImage, { filter: 'grayscale(100%)', opacity: imageOpacity } as any]}
@@ -399,7 +548,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     position: 'absolute',
-    top: '15%',
+    top: '12%',
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -409,6 +558,68 @@ const styles = StyleSheet.create({
   logo: {
     width: 300,
     height: 150,
+  },
+  setupTitle: {
+    fontSize: 28,
+    fontFamily: 'Inter-Bold',
+    color: '#f5f5f5',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  setupSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#8d8d8d',
+    textAlign: 'center',
+  },
+  profileSetupContainer: {
+    position: 'absolute',
+    top: '28%',
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    zIndex: 10,
+    alignItems: 'center',
+  },
+  avatarPicker: {
+    position: 'relative',
+    width: 96,
+    height: 96,
+    marginBottom: 8,
+  },
+  avatarPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: '#f71c0b',
+  },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 2,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraIconBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f71c0b',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarHint: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#8d8d8d',
+    marginBottom: 20,
   },
   formContainer: {
     position: 'absolute',
@@ -430,6 +641,22 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#f5f5f5',
     marginBottom: 14,
+  },
+  bioInput: {
+    height: 100,
+    paddingTop: 14,
+    paddingBottom: 14,
+    textAlignVertical: 'top',
+    fontSize: 15,
+    marginBottom: 4,
+    width: '100%',
+  },
+  charCount: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#555',
+    alignSelf: 'flex-end',
+    marginBottom: 12,
   },
   button: {
     height: 60,
